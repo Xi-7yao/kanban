@@ -15,6 +15,21 @@ apiClient.interceptors.request.use((config) => {
     return config;
 });
 
+// Handle 401 Unauthorized — auto-logout (skip for /auth/ requests)
+apiClient.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (
+            error.response?.status === 401 &&
+            !error.config?.url?.startsWith('/auth/')
+        ) {
+            localStorage.removeItem('access_token');
+            window.dispatchEvent(new Event('auth:logout'));
+        }
+        return Promise.reject(error);
+    }
+);
+
 export const kanbanApi = {
     // 1. 获取看板数据
     getBoard: async () => {
