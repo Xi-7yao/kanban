@@ -6,28 +6,33 @@ import {
     Param,
     ParseIntPipe,
     Post,
-    Put
+    Put,
+    Req,
+    UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
+import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ColumnsService } from './columns.service';
 import { CreateColumnDto } from './dto/create-column.dto';
 import { UpdateColumnDto } from './dto/update-column.dto';
 
 @ApiTags('Columns')
-@Controller('columns') // ✅ 路由前缀统一为 /columns
+@ApiBearerAuth()
+@UseGuards(AuthGuard('jwt'))
+@Controller('columns')
 export class ColumnsController {
     constructor(private readonly columnsService: ColumnsService) { }
 
     @Get()
     @ApiOperation({ summary: '获取看板列 (包含卡片)' })
-    findAll() {
-        return this.columnsService.getBoard();
+    findAll(@Req() req) {
+        return this.columnsService.getBoard(req.user.userId);
     }
 
     @Post()
     @ApiOperation({ summary: '创建新列' })
-    create(@Body() body: CreateColumnDto) {
-        return this.columnsService.create(body);
+    create(@Req() req, @Body() body: CreateColumnDto) {
+        return this.columnsService.create(req.user.userId, body);
     }
 
     @Put(':id')
