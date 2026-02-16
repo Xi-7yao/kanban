@@ -13,11 +13,11 @@ async function bootstrap() {
     forbidNonWhitelisted: true,
   }));
 
-  // 2. ✅ 配置 Swagger
   const config = new DocumentBuilder()
-    .setTitle('看板系统 API') // 文档标题
-    .setDescription('这是一个基于 NestJS 和 Prisma 的全栈看板项目 API 文档') // 描述
-    .setVersion('1.0') // 版本
+    .setTitle('看板系统 API')
+    .setDescription('基于 NestJS 和 Prisma 的全栈看板项目 API 文档')
+    .setVersion('1.0')
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

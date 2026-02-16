@@ -7,15 +7,19 @@ import {
     ParseIntPipe,
     Post,
     Put,
-    Query
+    Query,
+    UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags, ApiQuery } from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
+import { ApiOperation, ApiTags, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { CardsService } from './cards.service';
 import { CreateCardDto } from './dto/create-card.dto';
 import { UpdateCardDto } from './dto/update-card.dto';
 
 @ApiTags('Cards')
-@Controller('cards') // ✅ 路由前缀统一为 /cards
+@ApiBearerAuth()
+@UseGuards(AuthGuard('jwt'))
+@Controller('cards')
 export class CardsController {
     constructor(private readonly cardsService: CardsService) { }
 

@@ -7,21 +7,24 @@ import { UpdateColumnDto } from './dto/update-column.dto';
 export class ColumnsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // 1. 获取完整看板 (包含卡片)
-  async getBoard() {
+  async getBoard(userId: number) {
     return this.prisma.column.findMany({
+      where: { userId },
       include: {
         cards: {
-          orderBy: { order: 'asc' }, // 保证卡片按顺序返回
+          orderBy: { order: 'asc' },
         },
       },
-      orderBy: { order: 'asc' }, // 保证列按顺序返回
+      orderBy: { order: 'asc' },
     });
   }
 
-  async create(createColumnDto: CreateColumnDto) {
+  async create(userId: number, createColumnDto: CreateColumnDto) {
     return this.prisma.column.create({
-      data: createColumnDto,
+      data: {
+        ...createColumnDto,
+        userId,
+      },
     });
   }
 
