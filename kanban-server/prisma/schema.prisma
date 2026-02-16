@@ -1,0 +1,55 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String   // 存放哈希后的密码
+  name      String?
+  
+  columns   Column[] // 用户拥有的列
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Column {
+  id        Int      @id @default(autoincrement()) // 主键，自动递增
+  title     String   // 列标题
+  order     Float    // 排序字段，用于拖拽排序（使用 Float 方便插入中间值）
+  
+  cards     Card[]
+
+  // ✅ 新增关联：列必须属于某个用户
+  userId    Int      
+  user      User     @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now()) // 创建时间
+  updatedAt DateTime @updatedAt      // 更新时间
+}
+
+model Card {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String?  // 内容可选，使用 "?"
+  order     Float    // 卡片在列内的排序位置
+  
+  columnId  Int      // 外键字段，存储 Column 的 ID
+  column    Column   @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
