@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Plus } from "lucide-react";
+import { Plus, LogOut } from "lucide-react";
 import {
     DndContext,
     type DragEndEvent,
@@ -18,8 +18,10 @@ import ColumnContainer from "./ColumnContainer";
 import TaskCard from "./TaskCard";
 import TaskDetailModal from "./TaskDetailModal"; // ✅ 引入新组件
 import { kanbanApi } from "../api";
+import { useAuth } from "../contexts/AuthContext";
 
 function KanbanBoard() {
+    const { logout } = useAuth();
     const [columns, setColumns] = useState<Column[]>([]);
     const [tasks, setTasks] = useState<Task[]>([]);
     const [activeColumn, setActiveColumn] = useState<Column | null>(null);
@@ -194,6 +196,15 @@ function KanbanBoard() {
 
     return (
         <div className="m-auto flex min-h-screen w-full items-center overflow-x-auto overflow-y-hidden px-[40px]">
+            <button
+                onClick={logout}
+                className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-900 border border-gray-700 text-gray-400 hover:text-white hover:border-rose-500 transition"
+                title="Sign out"
+            >
+                <LogOut size={18} />
+                <span className="text-sm font-medium">Sign Out</span>
+            </button>
+
             <DndContext
                 sensors={sensors}
                 onDragStart={onDragStart}
