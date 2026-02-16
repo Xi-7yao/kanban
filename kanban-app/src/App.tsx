@@ -1,4 +1,5 @@
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { ToastProvider } from "./contexts/ToastContext";
 import KanbanBoard from "./components/KanbanBoard";
 import AuthPage from "./components/AuthPage";
 
@@ -15,7 +16,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </AuthProvider>
   );
 }
