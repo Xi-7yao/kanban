@@ -1,29 +1,21 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
-import { CardsController } from './cards.controller';
-import { ColumnsController } from './columns.controller';
-import { ColumnsService } from './columns.service';
-import { CardsService } from './cards.service';
-import { PrismaService } from './prisma.service';
+import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { ColumnsModule } from './columns/columns.module';
+import { CardsModule } from './cards/cards.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    PrismaModule,
     AuthModule,
     UsersModule,
+    ColumnsModule,
+    CardsModule,
   ],
-  controllers: [
-    AppController,
-    CardsController, // 👈 注册
-    ColumnsController // 👈 注册
-  ],
-  providers: [
-    PrismaService,
-    ColumnsService,
-    CardsService
-  ],
+  controllers: [AppController],
 })
-export class AppModule { }
+export class AppModule {}

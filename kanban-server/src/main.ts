@@ -1,33 +1,42 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
-// 1. 引入 Swagger 相关模块
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
+  const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
 
   app.useGlobalPipes(new ValidationPipe({
-    whitelist: true, 
-    transform: true, 
+    whitelist: true,
+    transform: true,
     forbidNonWhitelisted: true,
   }));
 
+  app.useGlobalFilters(new AllExceptionsFilter());
+
   const config = new DocumentBuilder()
-    .setTitle('看板系统 API')
-    .setDescription('基于 NestJS 和 Prisma 的全栈看板项目 API 文档')
+    .setTitle('Kanban Board API')
+    .setDescription('Full-stack Kanban board API with JWT authentication')
     .setVersion('1.0')
     .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document); // 访问路径为 /api
+  SwaggerModule.setup('api', app, document);
 
-  // 3. ✅ 开启 CORS (跨域资源共享)
-  // 如果不加这行，以后你的前端(React/Vue)运行在 localhost:5173 时，
-  // 访问 localhost:3000 的后端会被浏览器拦截。
-  app.enableCors();
+  app.enableCors({
+    origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:5173'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
 
-  await app.listen(process.env.PORT ?? 3000);
+  const port = process.env.PORT ?? 3000;
+  await app.listen(port);
+  logger.log(`Application running on http://localhost:${port}`);
+  logger.log(`Swagger docs at http://localhost:${port}/api`);
 }
+
 bootstrap();

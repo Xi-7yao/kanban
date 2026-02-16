@@ -1,33 +1,23 @@
 import { Body, Controller, Post } from '@nestjs/common';
-import { AuthService } from './auth.service';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-
-// 简单定义一下 DTO，你可以稍后移到单独文件
-class LoginDto {
-    email: string;
-    password: string;
-}
-
-class RegisterDto {
-    email: string;
-    password: string;
-    name?: string;
-}
+import { AuthService } from './auth.service';
+import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-    constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
-    @Post('login')
-    @ApiOperation({ summary: '用户登录' })
-    async login(@Body() body: LoginDto) {
-        return this.authService.login(body.email, body.password);
-    }
+  @Post('login')
+  @ApiOperation({ summary: '用户登录' })
+  async login(@Body() dto: LoginDto) {
+    return this.authService.login(dto.email, dto.password);
+  }
 
-    @Post('register')
-    @ApiOperation({ summary: '用户注册' })
-    async register(@Body() body: RegisterDto) {
-        return this.authService.register(body.email, body.password, body.name);
-    }
+  @Post('register')
+  @ApiOperation({ summary: '用户注册' })
+  async register(@Body() dto: RegisterDto) {
+    return this.authService.register(dto.email, dto.password, dto.name);
+  }
 }
