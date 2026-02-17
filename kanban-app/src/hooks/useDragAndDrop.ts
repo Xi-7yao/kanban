@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
     type DragEndEvent,
     type DragOverEvent,
@@ -21,6 +21,9 @@ export function useDragAndDrop({ tasks, setTasks, setColumns, moveTask }: UseDra
     const [activeColumn, setActiveColumn] = useState<Column | null>(null);
     const [activeTask, setActiveTask] = useState<Task | null>(null);
 
+    // 用 ref 同步记录拖拽过程中的目标列，避免 React 批处理/闭包过时问题
+    const dragTargetColumnRef = useRef<Id | null>(null);
+
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
@@ -30,6 +33,8 @@ export function useDragAndDrop({ tasks, setTasks, setColumns, moveTask }: UseDra
     );
 
     function onDragStart(event: DragStartEvent) {
+        dragTargetColumnRef.current = null;
+
         if (event.active.data.current?.type === "Column") {
             setActiveColumn(event.active.data.current.column);
             return;
@@ -44,29 +49,28 @@ export function useDragAndDrop({ tasks, setTasks, setColumns, moveTask }: UseDra
         setActiveColumn(null);
         setActiveTask(null);
 
+        const targetColumnId = dragTargetColumnRef.current;
+        dragTargetColumnRef.current = null;
+
         const { active, over } = event;
-        if (!over) return;
 
-        const activeId = active.id;
-        const overId = over.id;
-
-        if (activeId === overId) return;
-
-        if (active.data.current?.type === "Column") {
-            setColumns((columns) => {
-                const activeIndex = columns.findIndex((col) => col.id === activeId);
-                const overIndex = columns.findIndex((col) => col.id === overId);
-                return arrayMove(columns, activeIndex, overIndex);
-            });
+        // 持久化任务移动（从 ref 取目标列，不依赖 over 或 tasks 闭包）
+        if (active.data.current?.type === "Task" && targetColumnId !== null) {
+            const tasksInColumn = tasks.filter((t) => t.columnId === targetColumnId);
+            const newOrder = tasksInColumn.findIndex((t) => t.id === active.id);
+            moveTask(active.id, targetColumnId, newOrder >= 0 ? newOrder : tasksInColumn.length);
         }
 
-        if (active.data.current?.type === "Task") {
-            const currentTask = tasks.find((t) => t.id === activeId);
-            if (currentTask) {
-                const tasksInColumn = tasks.filter((t) => t.columnId === currentTask.columnId);
-                const newOrder = tasksInColumn.findIndex((t) => t.id === activeId);
-                moveTask(activeId, currentTask.columnId, newOrder);
-            }
+        if (!over) return;
+        if (active.id === over.id) return;
+
+        // 列拖拽排序
+        if (active.data.current?.type === "Column") {
+            setColumns((columns) => {
+                const activeIndex = columns.findIndex((col) => col.id === active.id);
+                const overIndex = columns.findIndex((col) => col.id === over.id);
+                return arrayMove(columns, activeIndex, overIndex);
+            });
         }
     }
 
@@ -85,22 +89,32 @@ export function useDragAndDrop({ tasks, setTasks, setColumns, moveTask }: UseDra
         if (!isActiveTask) return;
 
         if (isActiveTask && isOverTask) {
-            setTasks((tasks) => {
-                const activeIndex = tasks.findIndex((t) => t.id === activeId);
-                const overIndex = tasks.findIndex((t) => t.id === overId);
-                if (tasks[activeIndex].columnId !== tasks[overIndex].columnId) {
-                    tasks[activeIndex].columnId = tasks[overIndex].columnId;
-                }
-                return arrayMove(tasks, activeIndex, overIndex);
+            // 同步写入 ref：over 任务的 columnId 就是目标列
+            dragTargetColumnRef.current = over.data.current.task.columnId;
+
+            setTasks((prev) => {
+                const activeIndex = prev.findIndex((t) => t.id === activeId);
+                const overIndex = prev.findIndex((t) => t.id === overId);
+                const updated = prev.map((t, i) =>
+                    i === activeIndex && t.columnId !== prev[overIndex].columnId
+                        ? { ...t, columnId: prev[overIndex].columnId }
+                        : t
+                );
+                return arrayMove(updated, activeIndex, overIndex);
             });
         }
 
         const isOverColumn = over.data.current?.type === "Column";
         if (isActiveTask && isOverColumn) {
-            setTasks((tasks) => {
-                const activeIndex = tasks.findIndex((t) => t.id === activeId);
-                tasks[activeIndex].columnId = overId;
-                return arrayMove(tasks, activeIndex, activeIndex);
+            // 同步写入 ref：拖到列容器上，overId 就是目标列 ID
+            dragTargetColumnRef.current = overId;
+
+            setTasks((prev) => {
+                const activeIndex = prev.findIndex((t) => t.id === activeId);
+                const updated = prev.map((t, i) =>
+                    i === activeIndex ? { ...t, columnId: overId } : t
+                );
+                return arrayMove(updated, activeIndex, activeIndex);
             });
         }
     }
