@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Plus, LogOut } from "lucide-react";
-import { DndContext, DragOverlay } from "@dnd-kit/core";
+import { DndContext, DragOverlay, pointerWithin } from "@dnd-kit/core";
 import { SortableContext } from "@dnd-kit/sortable";
 import { createPortal } from "react-dom";
 
@@ -64,6 +64,7 @@ function KanbanBoard() {
 
             <DndContext
                 sensors={sensors}
+                collisionDetection={pointerWithin}
                 onDragStart={onDragStart}
                 onDragEnd={onDragEnd}
                 onDragOver={onDragOver}
