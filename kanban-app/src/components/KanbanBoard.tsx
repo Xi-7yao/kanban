@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Plus, LogOut } from "lucide-react";
 import { DndContext, DragOverlay, pointerWithin } from "@dnd-kit/core";
-import { SortableContext } from "@dnd-kit/sortable";
+import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { createPortal } from "react-dom";
 
 import type { Task } from "../types";
@@ -71,7 +71,7 @@ function KanbanBoard() {
             >
                 <div className="m-auto flex gap-4">
                     <div className="flex gap-4">
-                        <SortableContext items={columnsId}>
+                        <SortableContext items={columnsId} strategy={horizontalListSortingStrategy}>
                             {columns.map((col) => (
                                 <ColumnContainer
                                     key={col.id}

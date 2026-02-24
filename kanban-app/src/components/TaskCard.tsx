@@ -43,18 +43,16 @@ function TaskCard({ task, deleteTask, updateTask, onClick }: Props) {
         transform: CSS.Transform.toString(transform),
     };
 
-    // 拖拽时的样式（保持不变，已经是 border-2）
     if (isDragging) {
         return (
             <div
                 ref={setNodeRef}
-                style={style}
-                className="opacity-30 bg-gray-900 p-2.5 h-[100px] min-h-[100px] items-center flex text-left rounded-xl border-2 border-rose-500 cursor-grab relative"
+                style={{ transition, transform: CSS.Transform.toString(transform) }}
+                className="opacity-30 bg-gray-900 p-2.5 h-[100px] min-h-[100px] items-center flex text-left rounded-xl border-2 border-rose-500 relative"
             />
         );
     }
 
-    // 编辑模式
     if (editMode) {
         return (
             <div
@@ -62,7 +60,6 @@ function TaskCard({ task, deleteTask, updateTask, onClick }: Props) {
                 style={style}
                 {...attributes}
                 {...listeners}
-                // ✅ 修复：使用 border-2 border-transparent 替代 ring
                 className="bg-gray-900 p-2.5 h-[100px] min-h-[100px] items-center flex text-left rounded-xl border-2 border-transparent hover:border-rose-500 cursor-grab relative"
             >
                 <textarea
@@ -81,7 +78,6 @@ function TaskCard({ task, deleteTask, updateTask, onClick }: Props) {
         );
     }
 
-    // 默认展示模式
     return (
         <div
             ref={setNodeRef}
@@ -91,7 +87,6 @@ function TaskCard({ task, deleteTask, updateTask, onClick }: Props) {
             onClick={() => setEditMode(true)}
             onMouseEnter={() => setMouseIsOver(true)}
             onMouseLeave={() => setMouseIsOver(false)}
-            // ✅ 修复：使用 border-2 border-transparent 替代 ring，消除渲染残留
             className="bg-gray-900 p-2.5 h-[100px] min-h-[100px] items-center flex text-left rounded-xl border-2 border-transparent hover:border-rose-500 cursor-grab relative task group"
         >
             <p className="my-auto h-[90%] w-full overflow-y-auto overflow-x-hidden whitespace-pre-wrap text-gray-100">
@@ -106,7 +101,6 @@ function TaskCard({ task, deleteTask, updateTask, onClick }: Props) {
 
             {mouseIsOver && (
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-2">
-                    {/* 详情按钮 */}
                     {onClick && (
                         <button
                             onClick={(e) => {
@@ -120,7 +114,6 @@ function TaskCard({ task, deleteTask, updateTask, onClick }: Props) {
                         </button>
                     )}
 
-                    {/* 删除按钮 */}
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
