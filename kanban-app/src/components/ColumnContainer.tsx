@@ -1,4 +1,4 @@
-import { SortableContext, useSortable } from "@dnd-kit/sortable";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Trash2, Plus } from "lucide-react";
 import type { Column, Id, Task } from "../types";
 import { CSS } from "@dnd-kit/utilities";
@@ -60,7 +60,7 @@ function ColumnContainer({
     return (
       <div
         ref={setNodeRef}
-        style={style}
+        style={{ transition }}
         className="bg-gray-800 opacity-40 border-2 border-rose-500 w-[350px] h-[500px] max-h-[500px] rounded-md flex flex-col"
       ></div>
     );
@@ -108,7 +108,7 @@ function ColumnContainer({
 
       {/* Column Task Container */}
       <div className="flex flex-grow flex-col gap-4 p-2 overflow-x-hidden overflow-y-auto">
-        <SortableContext items={tasksIds}>
+        <SortableContext items={tasksIds} strategy={verticalListSortingStrategy}>
           {tasks.map((task) => (
             <TaskCard
               key={task.id}
