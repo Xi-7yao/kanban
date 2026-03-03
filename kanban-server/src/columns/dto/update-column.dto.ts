@@ -11,6 +11,5 @@ export class UpdateColumnDto {
   @ApiProperty({ description: '列排序权重', required: false, example: 1.5 })
   @IsNumber()
   @IsOptional()
-  @Min(0)
   order?: number;
 }

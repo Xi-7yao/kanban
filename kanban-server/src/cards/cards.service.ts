@@ -45,7 +45,7 @@ export class CardsService {
     });
   }
 
-  async update(id: number, userId: number, dto: UpdateCardDto) {
+async update(id: number, userId: number, dto: UpdateCardDto) {
     const card = await this.prisma.card.findUnique({
       where: { id },
       include: { column: { select: { userId: true } } },
@@ -59,18 +59,13 @@ export class CardsService {
       throw new ForbiddenException('You do not own this card');
     }
 
-    // If moving to a different column, verify ownership of the target column
+    // 如果跨列移动，校验目标列的权限
     if (dto.columnId && dto.columnId !== card.columnId) {
       const targetColumn = await this.prisma.column.findUnique({
         where: { id: dto.columnId },
       });
-
-      if (!targetColumn) {
-        throw new NotFoundException(`Target column with ID ${dto.columnId} not found`);
-      }
-
-      if (targetColumn.userId !== userId) {
-        throw new ForbiddenException('You do not own the target column');
+      if (!targetColumn || targetColumn.userId !== userId) {
+        throw new ForbiddenException('Target column invalid or access denied');
       }
     }
 
