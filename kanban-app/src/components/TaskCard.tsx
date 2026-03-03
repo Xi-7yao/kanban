@@ -1,29 +1,34 @@
+import { memo, useEffect, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Trash2, FileText } from "lucide-react";
-import type { Task, Id } from "../types";
-import { useEffect, useState } from "react";
+import { Trash2, FileText, Lock } from "lucide-react";
+import type { Task } from "../types";
 import { useDebounce } from "../hooks/useDebounce";
+import { useUpdateTask, useDeleteTask } from "../queries/mutations/useTaskMutations";
+import { useLock } from "../contexts/LockContext";
 
 interface Props {
     task: Task;
-    deleteTask: (id: Id) => void;
-    updateTask: (id: Id, title: string) => void;
     onClick?: (task: Task) => void;
 }
 
-function TaskCard({ task, deleteTask, updateTask, onClick }: Props) {
+const TaskCard = memo(function TaskCard({ task, onClick }: Props) {
     const [mouseIsOver, setMouseIsOver] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [value, setValue] = useState(task.title);
 
     const debouncedTitle = useDebounce(value, 500);
+    const { mutate: updateTask } = useUpdateTask();
+    const { mutate: deleteTask } = useDeleteTask();
+    const { isLocked } = useLock();
+
+    const isTaskLocked = isLocked(`task-${task.id}`);
 
     useEffect(() => {
-        if (debouncedTitle !== task.title) {
-            updateTask(task.id, debouncedTitle);
+        if (debouncedTitle !== task.title && debouncedTitle.trim() !== "") {
+            updateTask({ id: task.id, updates: { title: debouncedTitle } });
         }
-    }, [debouncedTitle, task.id, task.title]);
+    }, [debouncedTitle, task.id, task.title, updateTask]);
 
     const {
         setNodeRef,
@@ -35,7 +40,7 @@ function TaskCard({ task, deleteTask, updateTask, onClick }: Props) {
     } = useSortable({
         id: task.id,
         data: { type: "Task", task },
-        disabled: editMode,
+        disabled: editMode || isTaskLocked,
     });
 
     const style = {
@@ -43,13 +48,15 @@ function TaskCard({ task, deleteTask, updateTask, onClick }: Props) {
         transform: CSS.Transform.toString(transform),
     };
 
-    if (isDragging) {
+    if (isDragging || isTaskLocked) {
         return (
             <div
                 ref={setNodeRef}
                 style={{ transition, transform: CSS.Transform.toString(transform) }}
-                className="opacity-30 bg-gray-900 p-2.5 h-[100px] min-h-[100px] items-center flex text-left rounded-xl border-2 border-rose-500 relative"
-            />
+                className="opacity-30 bg-gray-900 p-2.5 h-[100px] min-h-[100px] items-center flex justify-center text-left rounded-xl border-2 border-rose-500 relative"
+            >
+               {isTaskLocked && <Lock className="text-rose-500" size={24} />}
+            </div>
         );
     }
 
@@ -91,11 +98,10 @@ function TaskCard({ task, deleteTask, updateTask, onClick }: Props) {
         >
             <p className="my-auto h-[90%] w-full overflow-y-auto overflow-x-hidden whitespace-pre-wrap text-gray-100">
                 {task.title}
-
                 {task.content && (
-                    <p className="text-xs text-gray-500 line-clamp-2 mt-2">
+                    <span className="block text-xs text-gray-500 line-clamp-2 mt-2">
                         {task.content}
-                    </p>
+                    </span>
                 )}
             </p>
 
@@ -113,7 +119,6 @@ function TaskCard({ task, deleteTask, updateTask, onClick }: Props) {
                             <FileText size={16} />
                         </button>
                     )}
-
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
@@ -128,6 +133,11 @@ function TaskCard({ task, deleteTask, updateTask, onClick }: Props) {
             )}
         </div>
     );
-}
+}, (prev, next) => {
+    return prev.task.id === next.task.id
+        && prev.task.title === next.task.title
+        && prev.task.content === next.task.content
+        && prev.task.columnId === next.task.columnId;
+});
 
 export default TaskCard;
