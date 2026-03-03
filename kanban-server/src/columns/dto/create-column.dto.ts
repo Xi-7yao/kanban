@@ -10,6 +10,5 @@ export class CreateColumnDto {
 
   @ApiProperty({ description: '列排序权重', example: 0 })
   @IsNumber()
-  @Min(0)
   order: number;
 }
