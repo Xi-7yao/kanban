@@ -4,42 +4,27 @@ import { DndContext, DragOverlay, pointerWithin } from "@dnd-kit/core";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { createPortal } from "react-dom";
 
-import type { Task } from "../types";
 import ColumnContainer from "./ColumnContainer";
 import TaskCard from "./TaskCard";
 import TaskDetailModal from "./TaskDetailModal";
 import { useAuth } from "../contexts/AuthContext";
-import { useBoard } from "../hooks/useBoard";
+import { useBoardQuery } from "../queries/useBoardQuery";
+import { useCreateColumn } from "../queries/mutations/useColumnMutations";
+import { useUpdateTask } from "../queries/mutations/useTaskMutations";
 import { useDragAndDrop } from "../hooks/useDragAndDrop";
+import type { Task } from "../types";
 
 function KanbanBoard() {
     const { logout } = useAuth();
-    const {
-        columns,
-        setColumns,
-        tasks,
-        setTasks,
-        isLoading,
-        createColumn,
-        deleteColumn,
-        updateColumn,
-        createTask,
-        deleteTask,
-        updateTask,
-        updateTaskDetail,
-        moveTask,
-    } = useBoard();
+    const { data, isLoading, error } = useBoardQuery();
+    const { mutate: createColumn } = useCreateColumn();
+    const { mutate: updateTaskDetail } = useUpdateTask();
+    const [activeTaskDetail, setActiveTaskDetail] = useState<Task | null>(null);
 
-    const {
-        sensors,
-        activeColumn,
-        activeTask,
-        onDragStart,
-        onDragEnd,
-        onDragOver,
-    } = useDragAndDrop({ tasks, setTasks, setColumns, moveTask });
+    const { sensors, activeColumn, activeTask, onDragStart, onDragOver, onDragEnd, derivedData } = useDragAndDrop(data);
 
-    const [viewingTask, setViewingTask] = useState<Task | null>(null);
+    const boardData = derivedData || { columns: [], taskMap: {}, columnTaskIds: {} };
+    const { columns, taskMap, columnTaskIds } = boardData;
 
     const columnsId = useMemo(() => columns.map((col) => col.id), [columns]);
 
@@ -50,6 +35,8 @@ function KanbanBoard() {
             </div>
         );
     }
+
+    if (error || !data) return <div className="text-red-500">Error loading board.</div>;
 
     return (
         <div className="m-auto flex min-h-screen w-full items-center overflow-x-auto overflow-y-hidden px-[40px]">
@@ -66,8 +53,8 @@ function KanbanBoard() {
                 sensors={sensors}
                 collisionDetection={pointerWithin}
                 onDragStart={onDragStart}
-                onDragEnd={onDragEnd}
                 onDragOver={onDragOver}
+                onDragEnd={onDragEnd}
             >
                 <div className="m-auto flex gap-4">
                     <div className="flex gap-4">
@@ -76,19 +63,20 @@ function KanbanBoard() {
                                 <ColumnContainer
                                     key={col.id}
                                     column={col}
-                                    deleteColumn={deleteColumn}
-                                    updateColumn={updateColumn}
-                                    createTask={createTask}
-                                    deleteTask={deleteTask}
-                                    updateTask={updateTask}
-                                    onTaskClick={setViewingTask}
-                                    tasks={tasks.filter((task) => task.columnId === col.id)}
+                                    taskIds={columnTaskIds[col.id] || []}
+                                    taskMap={taskMap}
+                                    onTaskClick={setActiveTaskDetail}
                                 />
                             ))}
                         </SortableContext>
                     </div>
                     <button
-                        onClick={() => createColumn()}
+                        onClick={() => {
+                            // 🚀 获取当前最后一列的 order，加上步长
+                            const lastColumn = columns[columns.length - 1];
+                            const nextOrder = lastColumn ? lastColumn.order + 1024 : 1024;
+                            createColumn({ title: "New Column", order: nextOrder });
+                        }}
                         className="h-[60px] w-[350px] min-w-[350px] cursor-pointer rounded-lg bg-gray-900 border-2 border-gray-900 p-4 ring-rose-500 hover:ring-2 flex gap-2 text-white"
                     >
                         <Plus />
@@ -101,33 +89,22 @@ function KanbanBoard() {
                         {activeColumn && (
                             <ColumnContainer
                                 column={activeColumn}
-                                deleteColumn={deleteColumn}
-                                updateColumn={updateColumn}
-                                createTask={createTask}
-                                deleteTask={deleteTask}
-                                updateTask={updateTask}
-                                tasks={tasks.filter((task) => task.columnId === activeColumn.id)}
+                                taskIds={columnTaskIds[activeColumn.id] || []}
+                                taskMap={taskMap}
                             />
                         )}
-                        {activeTask && (
-                            <TaskCard
-                                task={activeTask}
-                                deleteTask={deleteTask}
-                                updateTask={updateTask}
-                            />
-                        )}
+                        {activeTask && <TaskCard task={activeTask} />}
                     </DragOverlay>,
                     document.body
                 )}
             </DndContext>
 
-            {viewingTask && createPortal(
+            {activeTaskDetail && (
                 <TaskDetailModal
-                    task={viewingTask}
-                    onClose={() => setViewingTask(null)}
-                    onUpdate={updateTaskDetail}
-                />,
-                document.body
+                    task={activeTaskDetail}
+                    onClose={() => setActiveTaskDetail(null)}
+                    onUpdate={(id, updates) => updateTaskDetail({ id, updates })}
+                />
             )}
         </div>
     );

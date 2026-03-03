@@ -49,8 +49,8 @@ export const kanbanApi = {
         return res.data;
     },
 
-    updateColumn: async (id: Id, title: string) => {
-        const res = await apiClient.put<Column>(`/columns/${id}`, { title });
+    updateColumn: async (id: Id, updates: { title?: string; order?: number }) => {
+        const res = await apiClient.put<Column>(`/columns/${id}`, updates);
         return res.data;
     },
 
