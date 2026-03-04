@@ -15,7 +15,6 @@ export class CreateCardDto {
 
   @ApiProperty({ description: '排序权重', example: 0 })
   @IsNumber()
-  @Min(0)
   order: number;
 
   @ApiProperty({ description: '所属列的 ID', example: 1 })

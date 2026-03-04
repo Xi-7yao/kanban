@@ -3,10 +3,20 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
+
+  app.use(cookieParser());
+
+  app.enableCors({
+    origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:5173'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
+  });
 
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
@@ -20,18 +30,11 @@ async function bootstrap() {
     .setTitle('Kanban Board API')
     .setDescription('Full-stack Kanban board API with JWT authentication')
     .setVersion('1.0')
-    .addBearerAuth()
+    .addBearerAuth() // 注意：虽然改用了 Cookie，但如果你依然想在 Swagger UI 中测试需要 Auth 的接口，保留这个依然有帮助，或者后续可以配置 Swagger 支持 Cookie auth
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
-
-  app.enableCors({
-    origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:5173'],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  });
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);

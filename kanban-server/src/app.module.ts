@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core'; // 新增引入
 import { AppController } from './app.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ColumnsModule } from './columns/columns.module';
 import { CardsModule } from './cards/cards.module';
+import { CsrfGuard } from './common/guards/csrf.guard'; // 新增引入
 
 @Module({
   imports: [
@@ -17,5 +19,12 @@ import { CardsModule } from './cards/cards.module';
     CardsModule,
   ],
   controllers: [AppController],
+  // ⬇️ 修改这里：添加 providers 注册全局 CSRF 防御
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: CsrfGuard,
+    },
+  ],
 })
-export class AppModule {}
+export class AppModule { }
