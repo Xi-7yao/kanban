@@ -3,19 +3,22 @@ import type { Column, Task, Id } from './types';
 
 const apiClient = axios.create({
     baseURL: 'http://localhost:3000',
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json' },
+    withCredentials: true, 
 });
 
-// Attach JWT token to every request if available
 apiClient.interceptors.request.use((config) => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+    const csrfToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrf_token='))
+        ?.split('=')[1];
+
+    if (csrfToken) {
+        config.headers['X-CSRF-Token'] = csrfToken;
     }
     return config;
 });
 
-// Handle 401 Unauthorized — auto-logout (skip for /auth/ requests)
 apiClient.interceptors.response.use(
     (response) => response,
     (error) => {
@@ -23,7 +26,6 @@ apiClient.interceptors.response.use(
             error.response?.status === 401 &&
             !error.config?.url?.startsWith('/auth/')
         ) {
-            localStorage.removeItem('access_token');
             window.dispatchEvent(new Event('auth:logout'));
         }
         return Promise.reject(error);
@@ -89,22 +91,21 @@ export const kanbanApi = {
 
 export const authApi = {
     login: async (email: string, password: string) => {
-        const res = await apiClient.post<{ access_token: string }>('/auth/login', { email, password });
-        localStorage.setItem('access_token', res.data.access_token);
+        const res = await apiClient.post('/auth/login', { email, password });
         return res.data;
     },
 
     register: async (email: string, password: string, name?: string) => {
-        const res = await apiClient.post<{ access_token: string }>('/auth/register', { email, password, name });
-        localStorage.setItem('access_token', res.data.access_token);
+        const res = await apiClient.post('/auth/register', { email, password, name });
         return res.data;
     },
 
-    logout: () => {
-        localStorage.removeItem('access_token');
+    logout: async () => {
+        await apiClient.post('/auth/logout');
     },
 
-    isLoggedIn: () => {
-        return !!localStorage.getItem('access_token');
+    me: async () => {
+        const res = await apiClient.get('/auth/me');
+        return res.data;
     },
 };

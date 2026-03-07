@@ -3,15 +3,31 @@ import { authApi } from "../api";
 
 interface AuthContextType {
     isAuthenticated: boolean;
+    isLoading: boolean;
     login: (email: string, password: string) => Promise<void>;
     register: (email: string, password: string, name?: string) => Promise<void>;
-    logout: () => void;
+    logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [isAuthenticated, setIsAuthenticated] = useState(authApi.isLoggedIn());
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [isLoading, setIsLoading] = useState(true); 
+
+    useEffect(() => {
+        const initAuth = async () => {
+            try {
+                await authApi.me();
+                setIsAuthenticated(true);
+            } catch (error) {
+                setIsAuthenticated(false);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        initAuth();
+    }, []);
 
     useEffect(() => {
         const handleForceLogout = () => {
@@ -31,13 +47,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsAuthenticated(true);
     }, []);
 
-    const logout = useCallback(() => {
-        authApi.logout();
-        setIsAuthenticated(false);
+    const logout = useCallback(async () => {
+        try {
+            await authApi.logout();
+        } catch (error) {
+            console.error("Logout failed", error);
+        } finally {
+            setIsAuthenticated(false);
+        }
     }, []);
 
+    if (isLoading) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-gray-950">
+                <div className="text-gray-400 text-lg">验证登录状态中...</div>
+            </div>
+        );
+    }
+
     return (
-        <AuthContext.Provider value={{ isAuthenticated, login, register, logout }}>
+        <AuthContext.Provider value={{ isAuthenticated, isLoading, login, register, logout }}>
             {children}
         </AuthContext.Provider>
     );

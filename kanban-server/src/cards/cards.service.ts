@@ -1,11 +1,15 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EventsGateway } from '../events/events.gateway';
 import { CreateCardDto } from './dto/create-card.dto';
 import { UpdateCardDto } from './dto/update-card.dto';
 
 @Injectable()
 export class CardsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventsGateway: EventsGateway,
+  ) {}
 
   async findAll(userId: number, search?: string) {
     const where: any = { column: { userId } };
@@ -37,12 +41,14 @@ export class CardsService {
     }
 
     const { columnId, ...rest } = dto;
-    return this.prisma.card.create({
+    const card = await this.prisma.card.create({
       data: {
         ...rest,
         column: { connect: { id: columnId } },
       },
     });
+    this.eventsGateway.broadcastToBoard(userId, 'board:event', { type: 'card:created', card });
+    return card;
   }
 
 async update(id: number, userId: number, dto: UpdateCardDto) {
@@ -69,10 +75,22 @@ async update(id: number, userId: number, dto: UpdateCardDto) {
       }
     }
 
-    return this.prisma.card.update({
+    const updated = await this.prisma.card.update({
       where: { id },
       data: dto,
     });
+
+    if (dto.columnId && dto.columnId !== card.columnId) {
+      this.eventsGateway.broadcastToBoard(userId, 'board:event', {
+        type: 'card:moved', cardId: id, fromColumnId: card.columnId, toColumnId: dto.columnId, order: updated.order,
+      });
+    } else {
+      this.eventsGateway.broadcastToBoard(userId, 'board:event', {
+        type: 'card:updated', cardId: id, changes: dto,
+      });
+    }
+
+    return updated;
   }
 
   async remove(id: number, userId: number) {
@@ -88,6 +106,10 @@ async update(id: number, userId: number, dto: UpdateCardDto) {
     if (card.column.userId !== userId) {
       throw new ForbiddenException('You do not own this card');
     }
+
+    this.eventsGateway.broadcastToBoard(userId, 'board:event', {
+      type: 'card:deleted', cardId: id, columnId: card.columnId,
+    });
 
     return this.prisma.card.delete({ where: { id } });
   }

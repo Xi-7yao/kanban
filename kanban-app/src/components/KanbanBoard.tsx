@@ -12,9 +12,11 @@ import { useBoardQuery } from "../queries/useBoardQuery";
 import { useCreateColumn } from "../queries/mutations/useColumnMutations";
 import { useUpdateTask } from "../queries/mutations/useTaskMutations";
 import { useDragAndDrop } from "../hooks/useDragAndDrop";
+import { useSocket } from "../hooks/useSocket";
 import type { Task } from "../types";
 
 function KanbanBoard() {
+    useSocket();
     const { logout } = useAuth();
     const { data, isLoading, error } = useBoardQuery();
     const { mutate: createColumn } = useCreateColumn();

@@ -1,11 +1,15 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EventsGateway } from '../events/events.gateway';
 import { CreateColumnDto } from './dto/create-column.dto';
 import { UpdateColumnDto } from './dto/update-column.dto';
 
 @Injectable()
 export class ColumnsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventsGateway: EventsGateway,
+  ) {}
 
   async getBoard(userId: number) {
     return this.prisma.column.findMany({
@@ -20,9 +24,11 @@ export class ColumnsService {
   }
 
   async create(userId: number, dto: CreateColumnDto) {
-    return this.prisma.column.create({
+    const column = await this.prisma.column.create({
       data: { ...dto, userId },
     });
+    this.eventsGateway.broadcastToBoard(userId, 'board:event', { type: 'column:created', column });
+    return column;
   }
 
   async update(id: number, userId: number, dto: UpdateColumnDto) {
@@ -36,10 +42,14 @@ export class ColumnsService {
       throw new ForbiddenException('You do not own this column');
     }
 
-    return this.prisma.column.update({
+    const updated = await this.prisma.column.update({
       where: { id },
       data: dto,
     });
+    this.eventsGateway.broadcastToBoard(userId, 'board:event', {
+      type: 'column:updated', columnId: id, changes: dto,
+    });
+    return updated;
   }
 
   async remove(id: number, userId: number) {
@@ -52,6 +62,10 @@ export class ColumnsService {
     if (column.userId !== userId) {
       throw new ForbiddenException('You do not own this column');
     }
+
+    this.eventsGateway.broadcastToBoard(userId, 'board:event', {
+      type: 'column:deleted', columnId: id,
+    });
 
     return this.prisma.column.delete({ where: { id } });
   }

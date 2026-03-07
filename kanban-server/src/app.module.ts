@@ -8,6 +8,7 @@ import { UsersModule } from './users/users.module';
 import { ColumnsModule } from './columns/columns.module';
 import { CardsModule } from './cards/cards.module';
 import { CsrfGuard } from './common/guards/csrf.guard'; // 新增引入
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -17,9 +18,9 @@ import { CsrfGuard } from './common/guards/csrf.guard'; // 新增引入
     UsersModule,
     ColumnsModule,
     CardsModule,
+    EventsModule,
   ],
   controllers: [AppController],
-  // ⬇️ 修改这里：添加 providers 注册全局 CSRF 防御
   providers: [
     {
       provide: APP_GUARD,
