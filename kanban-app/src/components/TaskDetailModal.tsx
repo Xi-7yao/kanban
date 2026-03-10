@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { X, Save } from "lucide-react";
 import type { Task, Id } from "../types";
+import { useSocketContext } from "../contexts/SocketContext";
 
 interface Props {
   task: Task;
@@ -11,6 +12,14 @@ interface Props {
 function TaskDetailModal({ task, onClose, onUpdate }: Props) {
   const [title, setTitle] = useState(task.title);
   const [content, setContent] = useState(task.content || "");
+  const { emitLockAcquire, emitLockRelease } = useSocketContext();
+
+  useEffect(() => {
+    emitLockAcquire(task.id);
+    return () => {
+      emitLockRelease(task.id);
+    };
+  }, [task.id, emitLockAcquire, emitLockRelease]);
 
   useEffect(() => {
     setTitle(task.title);

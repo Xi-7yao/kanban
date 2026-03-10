@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import { LockProvider } from "./contexts/LockContext";
+import { SocketProvider } from "./contexts/SocketContext";
 import KanbanBoard from "./components/KanbanBoard";
 import AuthPage from "./components/AuthPage";
 
@@ -30,7 +31,9 @@ function App() {
                 <ToastProvider>
                     {/* 将 LockProvider 注入到整个应用层 */}
                     <LockProvider>
-                        <AppContent />
+                        <SocketProvider>
+                            <AppContent />
+                        </SocketProvider>
                     </LockProvider>
                 </ToastProvider>
             </AuthProvider>

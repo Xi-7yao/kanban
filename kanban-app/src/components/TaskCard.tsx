@@ -6,6 +6,7 @@ import type { Task } from "../types";
 import { useDebounce } from "../hooks/useDebounce";
 import { useUpdateTask, useDeleteTask } from "../queries/mutations/useTaskMutations";
 import { useLock } from "../contexts/LockContext";
+import { useSocketContext } from "../contexts/SocketContext";
 
 interface Props {
     task: Task;
@@ -21,8 +22,19 @@ const TaskCard = memo(function TaskCard({ task, onClick }: Props) {
     const { mutate: updateTask } = useUpdateTask();
     const { mutate: deleteTask } = useDeleteTask();
     const { isLocked } = useLock();
+    const { emitLockAcquire, emitLockRelease } = useSocketContext();
 
     const isTaskLocked = isLocked(`task-${task.id}`);
+
+    const enterEditMode = () => {
+        setEditMode(true);
+        emitLockAcquire(task.id);
+    };
+
+    const exitEditMode = () => {
+        setEditMode(false);
+        emitLockRelease(task.id);
+    };
 
     useEffect(() => {
         if (debouncedTitle !== task.title && debouncedTitle.trim() !== "") {
@@ -74,10 +86,10 @@ const TaskCard = memo(function TaskCard({ task, onClick }: Props) {
                     value={value}
                     autoFocus
                     placeholder="输入任务标题..."
-                    onBlur={() => setEditMode(false)}
+                    onBlur={() => exitEditMode()}
                     onKeyDown={(e) => {
                         if (e.key === "Enter" && e.shiftKey) return;
-                        if (e.key === "Enter") setEditMode(false);
+                        if (e.key === "Enter") exitEditMode();
                     }}
                     onChange={(e) => setValue(e.target.value)}
                 />
@@ -91,7 +103,7 @@ const TaskCard = memo(function TaskCard({ task, onClick }: Props) {
             style={style}
             {...attributes}
             {...listeners}
-            onClick={() => setEditMode(true)}
+            onClick={() => enterEditMode()}
             onMouseEnter={() => setMouseIsOver(true)}
             onMouseLeave={() => setMouseIsOver(false)}
             className="bg-gray-900 p-2.5 h-[100px] min-h-[100px] items-center flex text-left rounded-xl border-2 border-transparent hover:border-rose-500 cursor-grab relative task group"

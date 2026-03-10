@@ -34,12 +34,11 @@ export function useBoardQuery() {
 
             columns.sort((a, b) => a.order - b.order);
 
-            // 🐛 打印从服务器拉取并计算出的最新排序
-            console.group('📥 [Server Data] 刚刚从服务器拉取的最新排序');
-            Object.keys(columnTaskIds).forEach(colId => {
-                console.log(`列 ID: ${colId} => 内部 Task 排序:`, columnTaskIds[colId]);
-            });
-            console.groupEnd();
+            // console.group('📥 [Server Data] 刚刚从服务器拉取的最新排序');
+            // Object.keys(columnTaskIds).forEach(colId => {
+            //     console.log(`列 ID: ${colId} => 内部 Task 排序:`, columnTaskIds[colId]);
+            // });
+            // console.groupEnd();
 
             return { columns, taskMap, columnTaskIds };
         },
