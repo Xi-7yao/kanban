@@ -34,13 +34,13 @@ function TaskDetailModal({ task, onClose, onUpdate }: Props) {
         <div className="flex items-start justify-between gap-4 mb-6">
           <div className="w-full">
             <label className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2 block">
-              任务标题
+              Task Title
             </label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full bg-transparent text-2xl font-bold text-white border-b-2 border-transparent focus:border-rose-500 focus:outline-none transition-colors pb-1"
-              placeholder="输入任务标题..."
+              placeholder="Enter task title..."
             />
           </div>
           <button
@@ -53,13 +53,13 @@ function TaskDetailModal({ task, onClose, onUpdate }: Props) {
 
         <div className="mb-8">
           <label className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2 block">
-            任务详情
+            Task Details
           </label>
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             className="w-full h-64 rounded-lg bg-gray-800 p-4 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-rose-500 resize-none leading-relaxed"
-            placeholder="在这里添加详细的描述..."
+            placeholder="Add a detailed description here..."
           />
         </div>
 
@@ -68,14 +68,14 @@ function TaskDetailModal({ task, onClose, onUpdate }: Props) {
             onClick={onClose}
             className="px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-800 transition font-medium"
           >
-            取消
+            Cancel
           </button>
           <button
             onClick={handleSave}
             className="flex items-center gap-2 px-6 py-2 rounded-lg bg-rose-500 text-white hover:bg-rose-600 transition font-medium shadow-lg shadow-rose-500/20"
           >
             <Save size={18} />
-            保存修改
+            Save Changes
           </button>
         </div>
       </div>

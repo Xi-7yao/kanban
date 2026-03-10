@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-950">
-        <div className="text-gray-400 text-lg">ÑéÖ¤µÇÂ¼×´Ì¬ÖÐ...</div>
+        <div className="text-gray-400 text-lg">Checking sign-in status...</div>
       </div>
     );
   }
