@@ -58,7 +58,7 @@ export function useDragAndDrop(data?: BoardData) {
         const isActiveTask = active.data.current?.type === 'Task';
         const isActiveColumn = active.data.current?.type === 'Column';
 
-        // 🟢 1. 处理列的视觉占位符移动
+        // 🟢 1. 处理列的视觉占位符移�?
         if (isActiveColumn) {
             let targetColumnId = overId;
             if (over.data.current?.type === 'Task') {
@@ -105,7 +105,7 @@ export function useDragAndDrop(data?: BoardData) {
         const overItems = [...currentData.columnTaskIds[overColumnId]];
         const activeIndex = activeItems.indexOf(activeId);
         
-        let overIndex = over.data.current?.type === 'Task' ? overItems.indexOf(overId) : overItems.length;
+        const overIndex = over.data.current?.type === 'Task' ? overItems.indexOf(overId) : overItems.length;
 
         activeItems.splice(activeIndex, 1);
         overItems.splice(overIndex, 0, activeId);
@@ -141,10 +141,10 @@ export function useDragAndDrop(data?: BoardData) {
 
         // 🟢 🚀 3. 列拖拽的最终结算（终极修复版）
         if (isActiveColumn) {
-            // 直接拿 onDragOver 中已经完美排好序的数组
+            // 直接�?onDragOver 中已经完美排好序的数�?
             const finalColumns = dragOverrides?.columns;
             
-            // 如果压根没发生移动（没触发 onDragOver 的重新排序）
+            // 如果压根没发生移动（没触�?onDragOver 的重新排序）
             if (!finalColumns) {
                 setDragOverrides(null);
                 return;
@@ -153,7 +153,7 @@ export function useDragAndDrop(data?: BoardData) {
             const activeIndex = finalColumns.findIndex(c => c.id === activeId);
             const originalIndex = data.columns.findIndex(c => c.id === activeId);
 
-            // 如果最终虽然动了，但落回了原点，取消操作
+            // 如果最终虽然动了，但落回了原点，取消操�?
             if (activeIndex === originalIndex) {
                 setDragOverrides(null);
                 return;
@@ -175,9 +175,9 @@ export function useDragAndDrop(data?: BoardData) {
                 col.id === activeId ? { ...col, order: newFloatOrder } : col
             );
 
-            console.group('🚀 [DragEnd] 列拖拽 Float 排序结算');
+            console.group('🚀 [DragEnd] 列拖�?Float 排序结算');
             console.log('1. 被拖拽的 Column ID:', activeId);
-            console.log('2. 算出全新的 Float Order:', newFloatOrder);
+            console.log('2. 算出全新�?Float Order:', newFloatOrder);
             console.log('3. 前端即将生效的列顺序:', updatedColumns.map(c => ({ id: c.id, order: c.order })));
             console.groupEnd();
 
@@ -192,7 +192,7 @@ export function useDragAndDrop(data?: BoardData) {
             return;
         }
 
-        // 🟢 4. 卡片拖拽的最终结算
+        // 🟢 4. 卡片拖拽的最终结�?
         if (isActiveTask) {
             const currentData = derivedData || data;
             const activeTaskObj = currentData.taskMap[activeId];
@@ -211,7 +211,7 @@ export function useDragAndDrop(data?: BoardData) {
                 overColumnId = overId;
             }
 
-            let finalColumnTaskIds = { ...currentData.columnTaskIds };
+            const finalColumnTaskIds = { ...currentData.columnTaskIds };
             const items = [...finalColumnTaskIds[overColumnId]];
             const activeIndex = items.indexOf(activeId);
             

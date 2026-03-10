@@ -63,10 +63,14 @@ export class ColumnsService {
       throw new ForbiddenException('You do not own this column');
     }
 
+    const deleted = await this.prisma.column.delete({ where: { id } });
+
     this.eventsGateway.broadcastToBoard(userId, 'board:event', {
       type: 'column:deleted', columnId: id,
     });
 
-    return this.prisma.column.delete({ where: { id } });
+    return deleted;
   }
 }
+
+

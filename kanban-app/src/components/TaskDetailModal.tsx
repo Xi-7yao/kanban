@@ -21,11 +21,6 @@ function TaskDetailModal({ task, onClose, onUpdate }: Props) {
     };
   }, [task.id, emitLockAcquire, emitLockRelease]);
 
-  useEffect(() => {
-    setTitle(task.title);
-    setContent(task.content || "");
-  }, [task]);
-
   const handleSave = () => {
     onUpdate(task.id, { title, content });
     onClose();
@@ -36,18 +31,16 @@ function TaskDetailModal({ task, onClose, onUpdate }: Props) {
       <div className="absolute inset-0" onClick={onClose}></div>
 
       <div className="relative z-10 w-full max-w-2xl rounded-xl bg-gray-900 border border-gray-700 p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
-        
-        {/* æ ‡é¢˜ç¼–è¾‘åŒº */}
         <div className="flex items-start justify-between gap-4 mb-6">
           <div className="w-full">
             <label className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2 block">
-              ä»»åŠ¡æ ‡é¢˜
+              ÈÎÎñ±êÌâ
             </label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full bg-transparent text-2xl font-bold text-white border-b-2 border-transparent focus:border-rose-500 focus:outline-none transition-colors pb-1"
-              placeholder="è¾“å…¥ä»»åŠ¡æ ‡é¢˜..."
+              placeholder="ÊäÈëÈÎÎñ±êÌâ..."
             />
           </div>
           <button
@@ -58,33 +51,31 @@ function TaskDetailModal({ task, onClose, onUpdate }: Props) {
           </button>
         </div>
 
-        {/* å†…å®¹ç¼–è¾‘åŒº */}
         <div className="mb-8">
           <label className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2 block">
-            ä»»åŠ¡è¯¦æƒ…
+            ÈÎÎñÏêÇé
           </label>
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             className="w-full h-64 rounded-lg bg-gray-800 p-4 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-rose-500 resize-none leading-relaxed"
-            placeholder="åœ¨è¿™é‡Œæ·»åŠ è¯¦ç»†çš„æè¿°..."
+            placeholder="ÔÚÕâÀïÌí¼ÓÏêÏ¸µÄÃèÊö..."
           />
         </div>
 
-        {/* åº•éƒ¨æŒ‰é’® */}
         <div className="flex justify-end gap-3">
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-800 transition font-medium"
           >
-            å–æ¶ˆ
+            È¡Ïû
           </button>
           <button
             onClick={handleSave}
             className="flex items-center gap-2 px-6 py-2 rounded-lg bg-rose-500 text-white hover:bg-rose-600 transition font-medium shadow-lg shadow-rose-500/20"
           >
             <Save size={18} />
-            ä¿å­˜ä¿®æ”¹
+            ±£´æĞŞ¸Ä
           </button>
         </div>
       </div>

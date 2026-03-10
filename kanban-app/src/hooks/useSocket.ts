@@ -9,21 +9,24 @@ export function useSocket() {
   const queryClient = useQueryClient();
   const { acquire, release } = useLock();
   const lockRef = useRef({ acquire, release });
-  lockRef.current = { acquire, release };
+
+  useEffect(() => {
+    lockRef.current = { acquire, release };
+  }, [acquire, release]);
 
   useEffect(() => {
     const socket = io('http://localhost:3000/board', { withCredentials: true });
 
     socket.on('connect', () => {
-      console.log('[WebSocket] 鎻℃墜鎴愬姛, socketId =', socket.id);
+      console.log('[WebSocket] 握手成功, socketId =', socket.id);
     });
 
     socket.on('connect_error', (err) => {
-      console.error('[WebSocket] 鎻℃墜澶辫触:', err.message);
+      console.error('[WebSocket] 握手失败:', err.message);
     });
 
     socket.on('board:event', (event) => {
-      console.log('[WebSocket] 鏀跺埌浜嬩欢:', event);
+      console.log('[WebSocket] 收到事件:', event);
       switch (event.type) {
         case 'card:created':
         case 'card:deleted':
@@ -46,7 +49,9 @@ export function useSocket() {
     });
 
     socketRef.current = socket;
-    return () => { socket.disconnect(); };
+    return () => {
+      socket.disconnect();
+    };
   }, [queryClient]);
 
   return socketRef;
