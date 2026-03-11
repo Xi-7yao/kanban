@@ -1,4 +1,4 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 import type { Column, Task, Id } from './types';
 
 const apiClient = axios.create({
@@ -33,19 +33,19 @@ apiClient.interceptors.response.use(
 );
 
 export const kanbanApi = {
-    // 1. 获取看板数据
+    // 1. 鑾峰彇鐪嬫澘鏁版嵁
     getBoard: async () => {
         const res = await apiClient.get<Column[]>('/columns');
         return res.data;
     },
 
-    // 2. 搜索卡片
+    // 2. 鎼滅储鍗＄墖
     searchCards: async (query: string) => {
         const res = await apiClient.get<Task[]>('/cards', { params: { q: query } });
         return res.data;
     },
 
-    // --- 列操作 ---
+    // --- 鍒楁搷浣?---
     createColumn: async (title: string, order: number) => {
         const res = await apiClient.post<Column>('/columns', { title, order });
         return res.data;
@@ -60,7 +60,7 @@ export const kanbanApi = {
         await apiClient.delete(`/columns/${id}`);
     },
 
-    // --- 卡片/任务操作 ---
+    // --- 鍗＄墖/浠诲姟鎿嶄綔 ---
     createTask: async (columnId: Id, title: string, order: number) => {
         const res = await apiClient.post<Task>('/cards', {
             title,
@@ -71,7 +71,7 @@ export const kanbanApi = {
         return res.data;
     },
 
-    updateTask: async (id: Id, updates: { title?: string; content?: string; columnId?: number; order?: number }) => {
+    updateTask: async (id: Id, updates: { title?: string; content?: string; columnId?: number; order?: number; expectedUpdatedAt?: string }) => {
         const res = await apiClient.put<Task>(`/cards/${id}`, updates);
         return res.data;
     },

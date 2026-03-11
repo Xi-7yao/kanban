@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+﻿import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventsGateway } from '../events/events.gateway';
 import { CreateCardDto } from './dto/create-card.dto';
@@ -47,11 +47,12 @@ export class CardsService {
         column: { connect: { id: columnId } },
       },
     });
+
     this.eventsGateway.broadcastToBoard(userId, 'board:event', { type: 'card:created', card });
     return card;
   }
 
-async update(id: number, userId: number, dto: UpdateCardDto) {
+  async update(id: number, userId: number, dto: UpdateCardDto) {
     const card = await this.prisma.card.findUnique({
       where: { id },
       include: { column: { select: { userId: true } } },
@@ -65,10 +66,18 @@ async update(id: number, userId: number, dto: UpdateCardDto) {
       throw new ForbiddenException('You do not own this card');
     }
 
-    // 如果跨列移动，校验目标列的权�?
-    if (dto.columnId && dto.columnId !== card.columnId) {
+    const { expectedUpdatedAt, ...changes } = dto;
+
+    if (expectedUpdatedAt) {
+      const expectedMs = new Date(expectedUpdatedAt).getTime();
+      if (card.updatedAt.getTime() !== expectedMs) {
+        throw new ConflictException('Card was updated by another user. Please refresh and try again.');
+      }
+    }
+
+    if (changes.columnId && changes.columnId !== card.columnId) {
       const targetColumn = await this.prisma.column.findUnique({
-        where: { id: dto.columnId },
+        where: { id: changes.columnId },
       });
       if (!targetColumn || targetColumn.userId !== userId) {
         throw new ForbiddenException('Target column invalid or access denied');
@@ -77,16 +86,22 @@ async update(id: number, userId: number, dto: UpdateCardDto) {
 
     const updated = await this.prisma.card.update({
       where: { id },
-      data: dto,
+      data: changes,
     });
 
-    if (dto.columnId && dto.columnId !== card.columnId) {
+    if (changes.columnId && changes.columnId !== card.columnId) {
       this.eventsGateway.broadcastToBoard(userId, 'board:event', {
-        type: 'card:moved', cardId: id, fromColumnId: card.columnId, toColumnId: dto.columnId, order: updated.order,
+        type: 'card:moved',
+        cardId: id,
+        fromColumnId: card.columnId,
+        toColumnId: changes.columnId,
+        order: updated.order,
       });
     } else {
       this.eventsGateway.broadcastToBoard(userId, 'board:event', {
-        type: 'card:updated', cardId: id, changes: dto,
+        type: 'card:updated',
+        cardId: id,
+        changes: { ...changes, updatedAt: updated.updatedAt },
       });
     }
 
@@ -110,11 +125,11 @@ async update(id: number, userId: number, dto: UpdateCardDto) {
     const deleted = await this.prisma.card.delete({ where: { id } });
 
     this.eventsGateway.broadcastToBoard(userId, 'board:event', {
-      type: 'card:deleted', cardId: id, columnId: card.columnId,
+      type: 'card:deleted',
+      cardId: id,
+      columnId: card.columnId,
     });
 
     return deleted;
   }
 }
-
-

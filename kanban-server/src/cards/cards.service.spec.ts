@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { CardsService } from './cards.service';
 
 describe('CardsService', () => {
@@ -58,5 +58,56 @@ describe('CardsService', () => {
     await expect(service.remove(1, 10)).rejects.toBeInstanceOf(ForbiddenException);
     expect(prisma.card.delete).not.toHaveBeenCalled();
     expect(eventsGateway.broadcastToBoard).not.toHaveBeenCalled();
+  });
+
+  it('throws ConflictException when expectedUpdatedAt does not match', async () => {
+    prisma.card.findUnique.mockResolvedValue({
+      id: 1,
+      columnId: 2,
+      updatedAt: new Date('2026-03-11T10:00:01.000Z'),
+      column: { userId: 10 },
+    });
+
+    await expect(
+      service.update(1, 10, {
+        title: 'New title',
+        expectedUpdatedAt: '2026-03-11T10:00:00.000Z',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    expect(prisma.card.update).not.toHaveBeenCalled();
+    expect(eventsGateway.broadcastToBoard).not.toHaveBeenCalled();
+  });
+
+  it('strips expectedUpdatedAt from db update and broadcasts fresh updatedAt', async () => {
+    const newUpdatedAt = new Date('2026-03-11T10:05:00.000Z');
+    prisma.card.findUnique.mockResolvedValue({
+      id: 1,
+      columnId: 2,
+      updatedAt: new Date('2026-03-11T10:00:00.000Z'),
+      column: { userId: 10 },
+    });
+    prisma.card.update.mockResolvedValue({
+      id: 1,
+      columnId: 2,
+      order: 1024,
+      title: 'Changed',
+      updatedAt: newUpdatedAt,
+    });
+
+    await service.update(1, 10, {
+      title: 'Changed',
+      expectedUpdatedAt: '2026-03-11T10:00:00.000Z',
+    });
+
+    expect(prisma.card.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { title: 'Changed' },
+    });
+    expect(eventsGateway.broadcastToBoard).toHaveBeenCalledWith(10, 'board:event', {
+      type: 'card:updated',
+      cardId: 1,
+      changes: { title: 'Changed', updatedAt: newUpdatedAt },
+    });
   });
 });

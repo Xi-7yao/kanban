@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { Plus, LogOut } from "lucide-react";
 import { DndContext, DragOverlay, pointerWithin } from "@dnd-kit/core";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
@@ -18,7 +18,7 @@ function KanbanBoard() {
   const { logout } = useAuth();
   const { data, isLoading, error } = useBoardQuery();
   const { mutate: createColumn } = useCreateColumn();
-  const { mutate: updateTaskDetail } = useUpdateTask();
+  const { mutateAsync: updateTaskDetail } = useUpdateTask();
   const [activeTaskDetail, setActiveTaskDetail] = useState<Task | null>(null);
 
   const { sensors, activeColumn, activeTask, onDragStart, onDragOver, onDragEnd, derivedData } = useDragAndDrop(data);
@@ -103,7 +103,7 @@ function KanbanBoard() {
           key={activeTaskDetail.id}
           task={activeTaskDetail}
           onClose={() => setActiveTaskDetail(null)}
-          onUpdate={(id, updates) => updateTaskDetail({ id, updates })}
+          onUpdate={async (id, updates) => { await updateTaskDetail({ id, updates }); }}
         />
       )}
     </div>
@@ -111,3 +111,4 @@ function KanbanBoard() {
 }
 
 export default KanbanBoard;
+

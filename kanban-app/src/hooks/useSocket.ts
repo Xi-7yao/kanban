@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+﻿import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useQueryClient } from '@tanstack/react-query';
 import { boardKeys } from '../queries/queryKeys';
@@ -123,9 +123,13 @@ export function useSocket() {
 
   useEffect(() => {
     const socket = io('http://localhost:3000/board', { withCredentials: true });
+    let hasConnectedOnce = false;
 
     socket.on('connect', () => {
-      console.log('[WebSocket] connected, socketId =', socket.id);
+      if (hasConnectedOnce) {
+        queryClient.invalidateQueries({ queryKey: boardKeys.columns() });
+      }
+      hasConnectedOnce = true;
     });
 
     socket.on('connect_error', (err) => {
@@ -133,7 +137,6 @@ export function useSocket() {
     });
 
     socket.on('board:event', (event: BoardEvent) => {
-      console.log('[WebSocket] board:event', event);
       switch (event.type) {
         case 'card:created':
         case 'card:deleted':
