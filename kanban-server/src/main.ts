@@ -1,4 +1,4 @@
-import { NestFactory } from '@nestjs/core';
+﻿import { NestFactory } from '@nestjs/core';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
@@ -30,7 +30,8 @@ async function bootstrap() {
     .setTitle('Kanban Board API')
     .setDescription('Full-stack Kanban board API with JWT authentication')
     .setVersion('1.0')
-    .addBearerAuth() // 注意：虽然改用了 Cookie，但如果你依然想在 Swagger UI 中测试需要 Auth 的接口，保留这个依然有帮助，或者后续可以配置 Swagger 支持 Cookie auth
+    // Swagger still uses bearer auth metadata even though the runtime auth path is cookie-based.
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

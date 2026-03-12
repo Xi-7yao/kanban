@@ -3,6 +3,7 @@ import { kanbanApi } from '../../api';
 import { boardKeys } from '../queryKeys';
 import type { BoardData } from '../useBoardQuery';
 import type { Id } from '../../types';
+import { applyColumnDelete, applyColumnUpdate } from '../boardPatches';
 
 export function useCreateColumn() {
   const queryClient = useQueryClient();
@@ -18,18 +19,14 @@ export function useCreateColumn() {
 export function useUpdateColumn() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, title }: { id: Id; title: string }) => kanbanApi.updateColumn(id, { title }),
+    mutationFn: ({ id, title, expectedUpdatedAt }: { id: Id; title: string; expectedUpdatedAt?: string }) =>
+      kanbanApi.updateColumn(id, { title, expectedUpdatedAt }),
     onMutate: async ({ id, title }) => {
       await queryClient.cancelQueries({ queryKey: boardKeys.columns() });
       const previousBoard = queryClient.getQueryData<BoardData>(boardKeys.columns());
 
       if (previousBoard) {
-        queryClient.setQueryData<BoardData>(boardKeys.columns(), {
-          ...previousBoard,
-          columns: previousBoard.columns.map((col) =>
-            col.id === id ? { ...col, title } : col,
-          ),
-        });
+        queryClient.setQueryData<BoardData>(boardKeys.columns(), applyColumnUpdate(previousBoard, id, { title }));
       }
       return { previousBoard };
     },
@@ -38,8 +35,11 @@ export function useUpdateColumn() {
         queryClient.setQueryData(boardKeys.columns(), context.previousBoard);
       }
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: boardKeys.columns() });
+    onSuccess: (updatedColumn, { id }) => {
+      queryClient.setQueryData<BoardData>(boardKeys.columns(), (current) => {
+        if (!current) return current;
+        return applyColumnUpdate(current, id, updatedColumn);
+      });
     },
   });
 }
@@ -53,23 +53,7 @@ export function useDeleteColumn() {
       const previousBoard = queryClient.getQueryData<BoardData>(boardKeys.columns());
 
       if (previousBoard) {
-        const newColumns = previousBoard.columns.filter((col) => col.id !== id);
-        const removedTaskIds = previousBoard.columnTaskIds[id] ?? [];
-
-        const newColumnTaskIds = { ...previousBoard.columnTaskIds };
-        delete newColumnTaskIds[id];
-
-        const newTaskMap = { ...previousBoard.taskMap };
-        removedTaskIds.forEach((taskId) => {
-          delete newTaskMap[taskId];
-        });
-
-        queryClient.setQueryData<BoardData>(boardKeys.columns(), {
-          ...previousBoard,
-          columns: newColumns,
-          columnTaskIds: newColumnTaskIds,
-          taskMap: newTaskMap,
-        });
+        queryClient.setQueryData<BoardData>(boardKeys.columns(), applyColumnDelete(previousBoard, id));
       }
       return { previousBoard };
     },
@@ -78,9 +62,6 @@ export function useDeleteColumn() {
         queryClient.setQueryData(boardKeys.columns(), context.previousBoard);
       }
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: boardKeys.columns() });
-    },
   });
 }
 
@@ -88,6 +69,12 @@ export function useMoveColumn() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, order }: { id: Id; order: number }) => kanbanApi.updateColumn(id, { order }),
+    onSuccess: (updatedColumn, { id }) => {
+      queryClient.setQueryData<BoardData>(boardKeys.columns(), (current) => {
+        if (!current) return current;
+        return applyColumnUpdate(current, id, updatedColumn);
+      });
+    },
     onError: () => {
       queryClient.invalidateQueries({ queryKey: boardKeys.columns() });
     },

@@ -1,4 +1,5 @@
-﻿import { memo, useState } from 'react';
+﻿import axios from 'axios';
+import { memo, useEffect, useState } from 'react';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Trash2, Plus } from 'lucide-react';
@@ -7,6 +8,7 @@ import TaskCard from './TaskCard';
 import { useColumnTasks } from '../queries/useColumnTasks';
 import { useUpdateColumn, useDeleteColumn } from '../queries/mutations/useColumnMutations';
 import { useCreateTask } from '../queries/mutations/useTaskMutations';
+import { useToast } from '../contexts/ToastContext';
 
 interface Props {
   column: Column;
@@ -24,13 +26,29 @@ const ColumnContainer = memo(
   }: Props) {
     const [editMode, setEditMode] = useState(false);
     const [draftTitle, setDraftTitle] = useState(column.title);
+    const [expectedUpdatedAt, setExpectedUpdatedAt] = useState(column.updatedAt);
+    const [isSavingTitle, setIsSavingTitle] = useState(false);
 
     const tasks = useColumnTasks(taskMap, taskIds);
-    const { mutate: updateColumn } = useUpdateColumn();
+    const { mutateAsync: updateColumn } = useUpdateColumn();
     const { mutate: deleteColumn } = useDeleteColumn();
     const { mutate: createTask } = useCreateTask();
+    const { showToast } = useToast();
 
-    const commitTitle = () => {
+    useEffect(() => {
+      if (editMode) {
+        return;
+      }
+
+      setDraftTitle(column.title);
+      setExpectedUpdatedAt(column.updatedAt);
+    }, [column.title, column.updatedAt, editMode]);
+
+    const commitTitle = async () => {
+      if (isSavingTitle) {
+        return;
+      }
+
       const nextTitle = draftTitle.trim();
       setEditMode(false);
 
@@ -40,7 +58,24 @@ const ColumnContainer = memo(
       }
 
       if (nextTitle !== column.title) {
-        updateColumn({ id: column.id, title: nextTitle });
+        setIsSavingTitle(true);
+        try {
+          const updatedColumn = await updateColumn({
+            id: column.id,
+            title: nextTitle,
+            expectedUpdatedAt,
+          });
+          setDraftTitle(updatedColumn.title);
+          setExpectedUpdatedAt(updatedColumn.updatedAt);
+        } catch (error) {
+          if (axios.isAxiosError(error) && error.response?.status === 409) {
+            showToast('This column was updated by someone else. Refresh and try again.', 'error');
+          } else {
+            showToast('Failed to save column title.', 'error');
+          }
+        } finally {
+          setIsSavingTitle(false);
+        }
       }
     };
 
@@ -83,6 +118,7 @@ const ColumnContainer = memo(
           {...listeners}
           onClick={() => {
             setDraftTitle(column.title);
+            setExpectedUpdatedAt(column.updatedAt);
             setEditMode(true);
           }}
           className="flex h-[60px] cursor-grab items-center justify-between rounded-md rounded-b-none border-4 border-gray-800 bg-gray-900 p-3 text-md font-bold"
@@ -98,7 +134,10 @@ const ColumnContainer = memo(
                 value={draftTitle}
                 onChange={(e) => setDraftTitle(e.target.value)}
                 autoFocus
-                onBlur={commitTitle}
+                disabled={isSavingTitle}
+                onBlur={() => {
+                  void commitTitle();
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -106,6 +145,7 @@ const ColumnContainer = memo(
                   }
                   if (e.key === 'Escape') {
                     setDraftTitle(column.title);
+                    setExpectedUpdatedAt(column.updatedAt);
                     setEditMode(false);
                   }
                 }}
@@ -160,4 +200,3 @@ const ColumnContainer = memo(
 );
 
 export default ColumnContainer;
-

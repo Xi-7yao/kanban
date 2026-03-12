@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent, DragOverEvent, DragStartEvent } from '@dnd-kit/core';
-import { arrayMove } from '@dnd-kit/sortable';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Column, Task, Id } from '../types';
 import type { BoardData } from '../queries/useBoardQuery';
@@ -9,6 +8,7 @@ import { useMoveTask } from '../queries/mutations/useTaskMutations';
 import { useMoveColumn } from '../queries/mutations/useColumnMutations';
 import { boardKeys } from '../queries/queryKeys';
 import { useSocketContext } from '../contexts/SocketContext';
+import { applyColumnMove, applyTaskMoveByIndex, reorderColumns } from '../queries/boardPatches';
 
 export function useDragAndDrop(data?: BoardData) {
   const queryClient = useQueryClient();
@@ -80,7 +80,7 @@ export function useDragAndDrop(data?: BoardData) {
       if (activeIndex !== -1 && overIndex !== -1 && activeIndex !== overIndex) {
         setDragOverrides({
           ...dragOverrides,
-          columns: arrayMove(currentCols, activeIndex, overIndex),
+          columns: reorderColumns(currentCols, activeId, targetColumnId),
         });
       }
       return;
@@ -105,25 +105,14 @@ export function useDragAndDrop(data?: BoardData) {
 
     if (activeColumnId === overColumnId) return;
 
-    const activeItems = [...currentData.columnTaskIds[activeColumnId]];
-    const overItems = [...currentData.columnTaskIds[overColumnId]];
-    const activeIndex = activeItems.indexOf(activeId);
+    const overItems = currentData.columnTaskIds[overColumnId] ?? [];
     const overIndex = over.data.current?.type === 'Task' ? overItems.indexOf(overId) : overItems.length;
-
-    activeItems.splice(activeIndex, 1);
-    overItems.splice(overIndex, 0, activeId);
+    const previewBoard = applyTaskMoveByIndex(currentData, activeId, overColumnId, overIndex);
 
     setDragOverrides({
       columns: dragOverrides?.columns || currentData.columns,
-      taskMap: {
-        ...currentData.taskMap,
-        [activeId]: { ...activeTaskObj, columnId: overColumnId },
-      },
-      columnTaskIds: {
-        ...currentData.columnTaskIds,
-        [activeColumnId]: activeItems,
-        [overColumnId]: overItems,
-      },
+      taskMap: previewBoard.taskMap,
+      columnTaskIds: previewBoard.columnTaskIds,
     });
   };
 
@@ -147,6 +136,7 @@ export function useDragAndDrop(data?: BoardData) {
     }
 
     if (isActiveColumn) {
+      const currentData = derivedData || data;
       const finalColumns = dragOverrides?.columns;
       if (!finalColumns) {
         setDragOverrides(null);
@@ -160,27 +150,12 @@ export function useDragAndDrop(data?: BoardData) {
         return;
       }
 
-      let newFloatOrder = 0;
-      if (finalColumns.length === 1) {
-        newFloatOrder = 65536;
-      } else if (activeIndex === 0) {
-        newFloatOrder = finalColumns[1].order - 1024;
-      } else if (activeIndex === finalColumns.length - 1) {
-        newFloatOrder = finalColumns[activeIndex - 1].order + 1024;
-      } else {
-        newFloatOrder = (finalColumns[activeIndex - 1].order + finalColumns[activeIndex + 1].order) / 2.0;
-      }
+      const updatedBoard = applyColumnMove(currentData, activeId, activeIndex);
+      const movedColumn = updatedBoard.columns.find((column) => column.id === activeId);
 
-      const updatedColumns = finalColumns.map((column) =>
-        column.id === activeId ? { ...column, order: newFloatOrder } : column,
-      );
+      queryClient.setQueryData<BoardData>(boardKeys.columns(), updatedBoard);
 
-      queryClient.setQueryData<BoardData>(boardKeys.columns(), {
-        ...data,
-        columns: updatedColumns,
-      });
-
-      moveColumn({ id: activeId, order: newFloatOrder });
+      moveColumn({ id: activeId, order: movedColumn?.order ?? 0 });
       setDragOverrides(null);
       return;
     }
@@ -203,59 +178,40 @@ export function useDragAndDrop(data?: BoardData) {
         overColumnId = overId;
       }
 
-      const finalColumnTaskIds = { ...currentData.columnTaskIds };
-      const items = [...finalColumnTaskIds[overColumnId]];
-      const activeIndex = items.indexOf(activeId);
-
-      let overIndex = activeIndex;
+      const targetItems = currentData.columnTaskIds[overColumnId] ?? [];
+      let overIndex = targetItems.indexOf(activeId);
       if (activeId !== overId) {
         if (isOverTask) {
-          overIndex = items.indexOf(overId);
+          overIndex = targetItems.indexOf(overId);
         } else if (isOverColumn) {
-          overIndex = items.length - 1;
-        }
-
-        if (overIndex !== -1 && activeIndex !== overIndex) {
-          finalColumnTaskIds[overColumnId] = arrayMove(items, activeIndex, overIndex);
+          overIndex = targetItems.length;
         }
       }
 
-      const finalArray = finalColumnTaskIds[overColumnId];
-      const currentIndex = finalArray.indexOf(activeId);
-
-      let newFloatOrder = 0;
-      if (finalArray.length === 1) {
-        newFloatOrder = 65536;
-      } else if (currentIndex === 0) {
-        const nextCardId = finalArray[1];
-        const nextOrder = currentData.taskMap[nextCardId].order;
-        newFloatOrder = nextOrder - 1024;
-      } else if (currentIndex === finalArray.length - 1) {
-        const prevCardId = finalArray[currentIndex - 1];
-        const prevOrder = currentData.taskMap[prevCardId].order;
-        newFloatOrder = prevOrder + 1024;
-      } else {
-        const prevCardId = finalArray[currentIndex - 1];
-        const nextCardId = finalArray[currentIndex + 1];
-        const prevOrder = currentData.taskMap[prevCardId].order;
-        const nextOrder = currentData.taskMap[nextCardId].order;
-        newFloatOrder = (prevOrder + nextOrder) / 2.0;
+      if (overIndex === -1) {
+        setDragOverrides(null);
+        return;
       }
 
-      queryClient.setQueryData<BoardData>(boardKeys.columns(), {
-        ...currentData,
-        columnTaskIds: finalColumnTaskIds,
-        taskMap: {
-          ...currentData.taskMap,
-          [activeId]: {
-            ...activeTaskObj,
-            columnId: overColumnId,
-            order: newFloatOrder,
-          },
-        },
-      });
+      const updatedBoard = applyTaskMoveByIndex(currentData, activeId, overColumnId, overIndex);
+      const movedTask = updatedBoard.taskMap[activeId];
 
-      moveTask({ id: activeId, columnId: overColumnId, order: newFloatOrder });
+      if (!movedTask) {
+        setDragOverrides(null);
+        return;
+      }
+
+      if (
+        movedTask.columnId === data.taskMap[activeId]?.columnId &&
+        movedTask.order === data.taskMap[activeId]?.order
+      ) {
+        setDragOverrides(null);
+        return;
+      }
+
+      queryClient.setQueryData<BoardData>(boardKeys.columns(), updatedBoard);
+
+      moveTask({ id: activeId, columnId: movedTask.columnId, order: movedTask.order });
     }
 
     setDragOverrides(null);

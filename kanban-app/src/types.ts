@@ -13,5 +13,6 @@ export type Column = {
   id: Id;
   title: string;
   order: number;
+  updatedAt?: string;
   cards?: Task[];
 };

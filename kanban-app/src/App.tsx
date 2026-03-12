@@ -19,7 +19,15 @@ function AppContent() {
     const { isAuthenticated } = useAuth();
     return (
         <div className="bg-black min-h-screen text-white">
-            {isAuthenticated ? <KanbanBoard /> : <AuthPage />}
+            {isAuthenticated ? (
+                <LockProvider>
+                    <SocketProvider enabled={isAuthenticated}>
+                        <KanbanBoard />
+                    </SocketProvider>
+                </LockProvider>
+            ) : (
+                <AuthPage />
+            )}
         </div>
     );
 }
@@ -29,12 +37,7 @@ function App() {
         <QueryClientProvider client={queryClient}>
             <AuthProvider>
                 <ToastProvider>
-                    {/* 将 LockProvider 注入到整个应用层 */}
-                    <LockProvider>
-                        <SocketProvider>
-                            <AppContent />
-                        </SocketProvider>
-                    </LockProvider>
+                    <AppContent />
                 </ToastProvider>
             </AuthProvider>
         </QueryClientProvider>

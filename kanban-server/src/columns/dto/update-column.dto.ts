@@ -1,15 +1,24 @@
-import { IsString, IsNumber, IsOptional, MaxLength, Min } from 'class-validator';
+﻿import { IsNumber, IsOptional, IsString, MaxLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateColumnDto {
-  @ApiProperty({ description: '列标题', required: false, example: '待办事项' })
+  @ApiProperty({ description: 'Column title', required: false, example: 'To Do' })
   @IsString()
   @IsOptional()
   @MaxLength(100)
   title?: string;
 
-  @ApiProperty({ description: '列排序权重', required: false, example: 1.5 })
+  @ApiProperty({ description: 'Column sort order', required: false, example: 1.5 })
   @IsNumber()
   @IsOptional()
   order?: number;
+
+  @ApiProperty({
+    description: 'Expected updatedAt for optimistic concurrency control',
+    required: false,
+    example: '2026-03-12T10:00:00.000Z',
+  })
+  @IsString()
+  @IsOptional()
+  expectedUpdatedAt?: string;
 }

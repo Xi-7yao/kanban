@@ -1,23 +1,30 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+﻿import { Transform } from 'class-transformer';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateCardDto {
-  @ApiProperty({ description: '卡片标题', example: '修复登录 Bug' })
+  @ApiProperty({ description: 'Card title', example: 'Fix login bug' })
   @IsString()
   @IsNotEmpty()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @MaxLength(200)
   title: string;
 
-  @ApiProperty({ description: '卡片详情内容', required: false, example: '用户无法收到验证码...' })
+  @ApiProperty({
+    description: 'Card details',
+    required: false,
+    example: 'Users are not receiving the verification code.',
+  })
   @IsString()
   @IsOptional()
+  @MaxLength(5000)
   content?: string;
 
-  @ApiProperty({ description: '排序权重', example: 0 })
-  @IsNumber()
+  @ApiProperty({ description: 'Sort order', example: 0 })
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   order: number;
 
-  @ApiProperty({ description: '所属列的 ID', example: 1 })
-  @IsNumber()
+  @ApiProperty({ description: 'Owning column ID', example: 1 })
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   columnId: number;
 }

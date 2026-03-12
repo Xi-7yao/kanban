@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Res, Get, UseGuards } from '@nestjs/common';
+锘縤mport { Body, Controller, Post, Res, Get, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -14,15 +14,7 @@ import type { JwtPayload } from '../common/interfaces/jwt-payload.interface';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  private setAuthCookies(res: Response, accessToken: string) {
-    res.cookie('access_token', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 24 * 60 * 60 * 1000,
-      path: '/',
-    });
-
+  private setCsrfCookie(res: Response) {
     const csrfToken = randomUUID();
     res.cookie('csrf_token', csrfToken, {
       httpOnly: false,
@@ -33,34 +25,53 @@ export class AuthController {
     });
   }
 
+  private setAuthCookies(res: Response, accessToken: string) {
+    res.cookie('access_token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000,
+      path: '/',
+    });
+
+    this.setCsrfCookie(res);
+  }
+
+  @Get('csrf')
+  @ApiOperation({ summary: 'Issue a CSRF token' })
+  issueCsrfToken(@Res({ passthrough: true }) res: Response) {
+    this.setCsrfCookie(res);
+    return { message: 'CSRF token issued' };
+  }
+
   @Post('login')
-  @ApiOperation({ summary: '用户登录' })
+  @ApiOperation({ summary: 'User login' })
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.authService.login(dto.email, dto.password);
     this.setAuthCookies(res, result.access_token);
-    return { message: '登录成功' };
+    return { message: 'Login successful' };
   }
 
   @Post('register')
-  @ApiOperation({ summary: '用户注册' })
+  @ApiOperation({ summary: 'User registration' })
   async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.authService.register(dto.email, dto.password, dto.name);
     this.setAuthCookies(res, result.access_token);
-    return { message: '注册成功' };
+    return { message: 'Registration successful' };
   }
 
   @Post('logout')
-  @ApiOperation({ summary: '用户登出' })
+  @ApiOperation({ summary: 'User logout' })
   async logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('access_token');
     res.clearCookie('csrf_token');
-    return { message: '登出成功' };
+    return { message: 'Logout successful' };
   }
 
   @Get('me')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @ApiOperation({ summary: '获取当前登录用户信息' })
+  @ApiOperation({ summary: 'Get current user' })
   async me(@GetUser() user: JwtPayload) {
     return user;
   }

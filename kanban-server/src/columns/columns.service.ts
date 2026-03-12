@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+﻿import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventsGateway } from '../events/events.gateway';
 import { CreateColumnDto } from './dto/create-column.dto';
@@ -42,12 +42,23 @@ export class ColumnsService {
       throw new ForbiddenException('You do not own this column');
     }
 
+    const { expectedUpdatedAt, ...changes } = dto;
+
+    if (expectedUpdatedAt) {
+      const expectedMs = new Date(expectedUpdatedAt).getTime();
+      if (column.updatedAt.getTime() !== expectedMs) {
+        throw new ConflictException('Column was updated by another user. Please refresh and try again.');
+      }
+    }
+
     const updated = await this.prisma.column.update({
       where: { id },
-      data: dto,
+      data: changes,
     });
     this.eventsGateway.broadcastToBoard(userId, 'board:event', {
-      type: 'column:updated', columnId: id, changes: dto,
+      type: 'column:updated',
+      columnId: id,
+      changes: { ...changes, updatedAt: updated.updatedAt },
     });
     return updated;
   }
@@ -72,5 +83,3 @@ export class ColumnsService {
     return deleted;
   }
 }
-
-

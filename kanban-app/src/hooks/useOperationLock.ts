@@ -1,4 +1,4 @@
-import { useRef, useCallback, useReducer } from "react";
+﻿import { useRef, useCallback, useReducer } from "react";
 
 export function useOperationLock() {
   const pendingOps = useRef<Set<string>>(new Set());
@@ -18,7 +18,12 @@ export function useOperationLock() {
     }
   }, []);
 
+  const sync = useCallback((keys: Iterable<string>) => {
+    pendingOps.current = new Set(keys);
+    forceRender();
+  }, []);
+
   const isLocked = useCallback((key: string) => pendingOps.current.has(key), []);
 
-  return { acquire, release, isLocked };
+  return { acquire, release, sync, isLocked };
 }

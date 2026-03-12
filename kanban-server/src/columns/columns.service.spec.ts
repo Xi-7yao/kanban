@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+﻿import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { ColumnsService } from './columns.service';
 
 describe('ColumnsService', () => {
@@ -54,5 +54,54 @@ describe('ColumnsService', () => {
     await expect(service.remove(1, 10)).rejects.toBeInstanceOf(ForbiddenException);
     expect(prisma.column.delete).not.toHaveBeenCalled();
     expect(eventsGateway.broadcastToBoard).not.toHaveBeenCalled();
+  });
+
+  it('throws ConflictException when expectedUpdatedAt does not match', async () => {
+    prisma.column.findUnique.mockResolvedValue({
+      id: 1,
+      userId: 10,
+      updatedAt: new Date('2026-03-12T10:00:01.000Z'),
+    });
+
+    await expect(
+      service.update(1, 10, {
+        title: 'Doing',
+        expectedUpdatedAt: '2026-03-12T10:00:00.000Z',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    expect(prisma.column.update).not.toHaveBeenCalled();
+    expect(eventsGateway.broadcastToBoard).not.toHaveBeenCalled();
+  });
+
+  it('strips expectedUpdatedAt from db update and broadcasts fresh updatedAt', async () => {
+    const newUpdatedAt = new Date('2026-03-12T10:05:00.000Z');
+    prisma.column.findUnique.mockResolvedValue({
+      id: 1,
+      userId: 10,
+      updatedAt: new Date('2026-03-12T10:00:00.000Z'),
+    });
+    prisma.column.update.mockResolvedValue({
+      id: 1,
+      userId: 10,
+      title: 'Doing',
+      order: 1024,
+      updatedAt: newUpdatedAt,
+    });
+
+    await service.update(1, 10, {
+      title: 'Doing',
+      expectedUpdatedAt: '2026-03-12T10:00:00.000Z',
+    });
+
+    expect(prisma.column.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { title: 'Doing' },
+    });
+    expect(eventsGateway.broadcastToBoard).toHaveBeenCalledWith(10, 'board:event', {
+      type: 'column:updated',
+      columnId: 1,
+      changes: { title: 'Doing', updatedAt: newUpdatedAt },
+    });
   });
 });

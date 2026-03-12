@@ -3,6 +3,7 @@ import { kanbanApi } from '../../api';
 import { boardKeys } from '../queryKeys';
 import type { BoardData } from '../useBoardQuery';
 import type { Id } from '../../types';
+import { applyTaskDelete, applyTaskMove, applyTaskUpdate } from '../boardPatches';
 
 type TaskUpdatePayload = {
   title?: string;
@@ -31,13 +32,10 @@ export function useUpdateTask() {
       delete optimisticUpdates.expectedUpdatedAt;
 
       if (previousBoard && previousBoard.taskMap[id]) {
-        queryClient.setQueryData<BoardData>(boardKeys.columns(), {
-          ...previousBoard,
-          taskMap: {
-            ...previousBoard.taskMap,
-            [id]: { ...previousBoard.taskMap[id], ...optimisticUpdates },
-          },
-        });
+        queryClient.setQueryData<BoardData>(
+          boardKeys.columns(),
+          applyTaskUpdate(previousBoard, id, optimisticUpdates),
+        );
       }
       return { previousBoard };
     },
@@ -46,7 +44,12 @@ export function useUpdateTask() {
         queryClient.setQueryData(boardKeys.columns(), context.previousBoard);
       }
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: boardKeys.columns() }),
+    onSuccess: (updatedTask, { id }) => {
+      queryClient.setQueryData<BoardData>(boardKeys.columns(), (current) => {
+        if (!current) return current;
+        return applyTaskUpdate(current, id, updatedTask);
+      });
+    },
   });
 }
 
@@ -59,19 +62,7 @@ export function useDeleteTask() {
       const previousBoard = queryClient.getQueryData<BoardData>(boardKeys.columns());
 
       if (previousBoard && previousBoard.taskMap[id]) {
-        const columnId = previousBoard.taskMap[id].columnId;
-
-        const newTaskMap = { ...previousBoard.taskMap };
-        delete newTaskMap[id];
-
-        const newColumnTaskIds = { ...previousBoard.columnTaskIds };
-        newColumnTaskIds[columnId] = newColumnTaskIds[columnId].filter((taskId) => taskId !== id);
-
-        queryClient.setQueryData<BoardData>(boardKeys.columns(), {
-          ...previousBoard,
-          taskMap: newTaskMap,
-          columnTaskIds: newColumnTaskIds,
-        });
+        queryClient.setQueryData<BoardData>(boardKeys.columns(), applyTaskDelete(previousBoard, id));
       }
       return { previousBoard };
     },
@@ -80,7 +71,6 @@ export function useDeleteTask() {
         queryClient.setQueryData(boardKeys.columns(), context.previousBoard);
       }
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: boardKeys.columns() }),
   });
 }
 
@@ -89,12 +79,14 @@ export function useMoveTask() {
   return useMutation({
     mutationFn: ({ id, columnId, order }: { id: Id; columnId: Id; order: number }) =>
       kanbanApi.moveTask(id, columnId, order),
-    onError: () => {
-      queryClient.invalidateQueries({ queryKey: boardKeys.columns() });
+    onSuccess: (updatedTask, { id, columnId, order }) => {
+      queryClient.setQueryData<BoardData>(boardKeys.columns(), (current) => {
+        if (!current) return current;
+        return applyTaskMove(current, id, columnId, order, { updatedAt: updatedTask.updatedAt });
+      });
     },
-    onSettled: () => {
+    onError: () => {
       queryClient.invalidateQueries({ queryKey: boardKeys.columns() });
     },
   });
 }
-
